@@ -26,6 +26,7 @@ class PagingSearch(object):
         index = 'bank'
         try:
             count = self.es.count(index=index)['count']
+            LOG.info('Get the index {} count is {}'.format(index,count))
         except Exception as e:
             LOG.error('Can not get index {} count,cause {}'.format(index, e))
         page_line = 5
