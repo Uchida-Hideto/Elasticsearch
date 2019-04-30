@@ -101,7 +101,7 @@ Elasticsearch为了能快速查找到某一个term，将所有的term排个序�
 
 ![](<https://i.loli.net/2019/04/30/5cc7bd700b6b4.jpeg>)
 
-###### 3.1索引创建
+###### 3.1 索引创建
 
 1.新document首先写入内存buffer缓存中，
 
@@ -139,7 +139,7 @@ Elasticsearch为了能快速查找到某一个term，将所有的term排个序�
 
 ![](<https://i.loli.net/2019/04/30/5cc7bd700f2c6.jpeg>)
 
-###### 4.1查询（Query Phase）阶段
+###### 4.1 查询（Query Phase）阶段
 
 1.在这个阶段首先协调节点将搜索请求路由到Index下的所有Shard(包括主要和副本)。
 
