@@ -184,3 +184,52 @@ curl -H 'Content-Type:application/json' -X GET 'localhost:9200/bank/_search?pret
 curl -H 'Content-Type:application/json' -X GET 'localhost:9200/bank/_search?pretty' -d '{"query":{"bool":{"must":{"match_all":{}},"filter":{"range":{"balance":{"gte":"20000","lte":"30000"}}}}}}'
 ```
 
+
+
+
+
+
+
+
+
+优化参数
+
+1.调整translog同步策略
+
+默认情况下，translog的持久化策略是，对于每个写入请求都做一次flush，刷新translog数据到磁盘上。这种频繁的磁盘IO操作是严重影响写入性能的，如果可以接受一定概率的数据丢失（这种硬件故障的概率很小），可以通过下面的命令调整 translog 持久化策略为异步周期性执行，并适当调整translog的刷盘周期。
+
+```
+curl -H “Content-Type:application/json” -X PUT  "localhost:9200/{index名称}/" -d '{"settings": {"index": {"translog": {"sync_interval": "5s","durability": "async"}}}}'
+```
+
+2.调整refresh_interval
+
+写入Lucene的数据，并不是实时可搜索的，ES必须通过refresh的过程把内存中的数据转换成Lucene的完整segment后，才可以被搜索。默认情况下，ES每一秒会refresh一次，产生一个新的segment，这样会导致产生的segment较多，从而segment merge较为频繁，系统开销较大。如果对数据的实时可见性要求较低，可以通过下面的命令提高refresh的时间间隔，降低系统开销
+
+```
+curl -H "Content-Type:application/json" -X PUT "localhost:9200/aaaaaa11" -d '{"settings":{"index":{"refresh_interval":"30s"}}}'
+```
+
+
+
+**4.** **merge****并发****控制**
+
+ES的一个index由多个shard组成，而一个shard其实就是一个Lucene的index，它又由多个segment组成，且Lucene会不断地把一些小的segment合并成一个大的segment，这个过程被称为merge。当节点配置的cpu核数较高时，merge占用的资源可能会偏高，影响集群的性能，可以通过下面的命令调整某个index的merge过程的并发度：
+
+```
+curl -H "Content-Type:application/json" -X PUT "localhost:9200/bank/_settings" -d '{"index.merge.scheduler.max_thread_count":2}'
+```
+
+
+
+安装
+
+1.确认JDK版本
+
+2.安装ES
+
+```
+curl -L -O 
+https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.0.1-linux-x86_64.tar.gz
+```
+
