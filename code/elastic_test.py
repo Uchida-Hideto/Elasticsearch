@@ -9,19 +9,21 @@ from win32com import client
 
 # word = client.Dispatch('Word.Application')
 
+LOGPATH = r'C:\Users\houji\Desktop'
+TIMESPAN = 60
+INDEX = 'test_index0'
+FILEPATH = r'C:\Users\houji\Desktop\Code'
+HOSTS = '192.168.127.132:9200'
+
 
 LOG = logging.getLogger('Insert_ES_index')
 LOG.setLevel(level=logging.DEBUG)
-file_handler = logging.FileHandler('ElasticSearch_index.log')
+file_handler = logging.FileHandler(r'{}\ElasticSearch_index.log'.format(LOGPATH))
 file_handler.setLevel(level=logging.DEBUG)
 log_format = logging.Formatter('%(asctime)s %(name)s %(process)d %(levelname)s %(message)s')
 file_handler.setFormatter(log_format)
 LOG.addHandler(file_handler)
 
-TIMESPAN = 60 * 60
-INDEX = 'test_index'
-PATH = r'C:\Users\houji\Desktop\Code'
-HOSTS = '192.168.17.131:9200'
 
 
 class ElasticClient(object):
@@ -29,6 +31,12 @@ class ElasticClient(object):
     def __init__(self):
         self.es = Elasticsearch(hosts=HOSTS)
         self.word_client = client.Dispatch("Word.Application")
+
+    def ping(self):
+        ping_status = self.es.ping()
+        # LOG.info('The Elasticsearch service status is {}'.format(ping_status))
+
+        return ping_status
 
     def get_index(self, index=INDEX):
         """
@@ -60,7 +68,7 @@ class ElasticClient(object):
                 }
             }
             update_mapping = self.es.indices.put_mapping(index=INDEX, body=mapping, ignore=400)
-            LOG.info('Set Elasticsearch mapping info successful')
+            LOG.info('Set Elasticsearch mapping info successful,return message is {}'.format(update_mapping))
             return update_mapping
         except Exception as e:
             LOG.error('Set Elasticsearch mapping info failed ,cause {}'.format(e))
@@ -84,7 +92,11 @@ class ElasticClient(object):
         insert data(read from file ) to es index
         :return:
         """
-
+        # if can not connection to es,it will return
+        ping_status = self.ping()
+        if not ping_status:
+            LOG.warning('The Elasticsearch service is not run!')
+            return
         # if not index ,create it
         index_status = self.get_index()
         if not index_status:
@@ -93,13 +105,13 @@ class ElasticClient(object):
 
         # judge the file exist or not
         # if file exist insert it
-        file_name_list = os.listdir(PATH)
+        file_name_list = os.listdir(FILEPATH)
         if not file_name_list:
             LOG.info('The directory is empty')
             return
 
         for file_name in file_name_list:
-            file_name_dir = os.path.join(PATH, file_name)
+            file_name_dir = os.path.join(FILEPATH, file_name)
             try:
                 # if the file is doc save as docx
                 # if file_name.endswith('doc'):
@@ -124,7 +136,7 @@ class ElasticClient(object):
                 LOG.error('Can not insert info to index ,cause {}'.format(e))
 
                 # after insert data ,remove the file
-                os.remove(file_name_dir)
+            os.remove(file_name_dir)
 
     # def dox_to_docx(self, file_name_dir):
     #     try:
