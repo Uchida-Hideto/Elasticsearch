@@ -2,20 +2,31 @@ import os
 import time
 import logging
 
+import configparser
 from elasticsearch import Elasticsearch
 from elasticsearch.client import IndicesClient
 import docx
 from win32com import client
+CONF_PATH = 'elastic.conf'
 
 # word = client.Dispatch('Word.Application')
 
-LOGPATH = r'C:\Users\houji\Desktop'
-TIMESPAN = 60
-INDEX = 'test_index0'
-FILEPATH = r'C:\Users\houji\Desktop\Code'
-HOSTS = '192.168.127.132:9200'
+# LOGPATH = r'C:\Users\houji\Desktop'
+# TIMESPAN = 60
+# INDEX = 'test_index0'
+# FILEPATH = r'C:\Users\houji\Desktop\Code'
+# HOSTS = '192.168.127.132:9200'
 
+# read config
+cf_parser = configparser.ConfigParser()
+cf_parser.read(CONF_PATH)
+LOGPATH = cf_parser.get('DEFAULT', 'LOGPATH')
+TIMESPAN = int(cf_parser.get('DEFAULT', 'TIMESPAN'))
+INDEX = cf_parser.get('DEFAULT', 'INDEX')
+FILEPATH = cf_parser.get('DEFAULT', 'FILEPATH')
+HOSTS = cf_parser.get('DEFAULT', 'HOSTS')
 
+# add log handler
 LOG = logging.getLogger('Insert_ES_index')
 LOG.setLevel(level=logging.DEBUG)
 file_handler = logging.FileHandler(r'{}\ElasticSearch_index.log'.format(LOGPATH))
@@ -30,7 +41,7 @@ class ElasticClient(object):
 
     def __init__(self):
         self.es = Elasticsearch(hosts=HOSTS)
-        self.word_client = client.Dispatch("Word.Application")
+        # self.word_client = client.Dispatch("Word.Application")
 
     def ping(self):
         ping_status = self.es.ping()
