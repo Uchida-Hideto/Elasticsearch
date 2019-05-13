@@ -158,7 +158,7 @@ class ElasticClient(object):
 
 
 if __name__ == '__main__':
+    es = ElasticClient()
     while True:
-        es = ElasticClient()
         es.insert_data_to_es_index()
         time.sleep(TIMESPAN)
