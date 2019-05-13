@@ -6,8 +6,8 @@ import docx
 import configparser
 from elasticsearch import Elasticsearch
 from elasticsearch.client import IndicesClient
-from win32com import client
-CONF_PATH = 'elastic.conf'
+# from win32com import client
+CONF_PATH = 'elastic.cnof'
 
 # word = client.Dispatch('Word.Application')
 
@@ -44,6 +44,11 @@ class ElasticClient(object):
         # self.word_client = client.Dispatch("Word.Application")
 
     def ping(self):
+        """
+        This function will determine whether the
+        elasticsearch service is running normally or not.
+         :return:
+        """
         ping_status = self.es.ping()
         # LOG.info('The Elasticsearch service status is {}'.format(ping_status))
 
