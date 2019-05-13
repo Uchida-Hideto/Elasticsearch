@@ -145,11 +145,13 @@ class ElasticClient(object):
                     LOG.info(
                         'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
                                                                                                        insert_data))
+                    # after insert data ,remove the file
+                    os.remove(file_name_dir)
+
             except Exception as e:
                 LOG.error('Can not insert info to index ,cause {}'.format(e))
 
-                # after insert data ,remove the file
-            os.remove(file_name_dir)
+
 
     # def dox_to_docx(self, file_name_dir):
     #     try:
