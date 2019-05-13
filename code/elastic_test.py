@@ -1,11 +1,11 @@
 import os
 import time
 import logging
+import docx
 
 import configparser
 from elasticsearch import Elasticsearch
 from elasticsearch.client import IndicesClient
-import docx
 from win32com import client
 CONF_PATH = 'elastic.conf'
 
@@ -21,6 +21,7 @@ CONF_PATH = 'elastic.conf'
 cf_parser = configparser.ConfigParser()
 cf_parser.read(CONF_PATH)
 LOGPATH = cf_parser.get('DEFAULT', 'LOGPATH')
+LOGNAME = cf_parser.get('DEFAULT', 'LOGNAME')
 TIMESPAN = int(cf_parser.get('DEFAULT', 'TIMESPAN'))
 INDEX = cf_parser.get('DEFAULT', 'INDEX')
 FILEPATH = cf_parser.get('DEFAULT', 'FILEPATH')
@@ -29,12 +30,11 @@ HOSTS = cf_parser.get('DEFAULT', 'HOSTS')
 # add log handler
 LOG = logging.getLogger('Insert_ES_index')
 LOG.setLevel(level=logging.DEBUG)
-file_handler = logging.FileHandler(r'{}\ElasticSearch_index.log'.format(LOGPATH))
+file_handler = logging.FileHandler(r'{}\{}'.format(LOGPATH, LOGNAME))
 file_handler.setLevel(level=logging.DEBUG)
 log_format = logging.Formatter('%(asctime)s %(name)s %(process)d %(levelname)s %(message)s')
 file_handler.setFormatter(log_format)
 LOG.addHandler(file_handler)
-
 
 
 class ElasticClient(object):
@@ -108,7 +108,7 @@ class ElasticClient(object):
         if not ping_status:
             LOG.warning('The Elasticsearch service is not run!')
             return
-        # if not index ,create it
+        # if no index ,create it
         index_status = self.get_index()
         if not index_status:
             LOG.info('Index is not exist ,start to create index')
@@ -134,11 +134,13 @@ class ElasticClient(object):
                     data_list = []
                     for index, paras in enumerate(data.paragraphs):
                         data_list.append(paras.text)
+
                     data_str = ''.join(data_list)
                     es_data = {
                         'title': '{}'.format(file_name),
                         'content': '{}'.format(data_str)
                     }
+
                     insert_data = self.es.index(index=INDEX, body=es_data)
                     LOG.info(
                         'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
