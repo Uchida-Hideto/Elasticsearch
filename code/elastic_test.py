@@ -2,14 +2,16 @@ import os
 import time
 import logging
 import docx
+from win32com import client as wc
 
 import configparser
 from elasticsearch import Elasticsearch
 from elasticsearch.client import IndicesClient
 # from win32com import client
-CONF_PATH = 'elastic.cnof'
+current_path = str(os.getcwd())
+CONF_PATH = r'{}\elastic.conf'.format(current_path)
 
-# word = client.Dispatch('Word.Application')
+
 
 # LOGPATH = r'C:\Users\houji\Desktop'
 # TIMESPAN = 60
@@ -41,7 +43,6 @@ class ElasticClient(object):
 
     def __init__(self):
         self.es = Elasticsearch(hosts=HOSTS)
-        # self.word_client = client.Dispatch("Word.Application")
 
     def ping(self):
         """
@@ -130,16 +131,21 @@ class ElasticClient(object):
             file_name_dir = os.path.join(FILEPATH, file_name)
             try:
                 # if the file is doc save as docx
-                # if file_name.endswith('doc'):
-                # 	self.dox_to_docx(file_name_dir)
+                if file_name.endswith('doc'):
+                    self.dox_to_docx(file_name_dir)
 
                 # read the file by third module python-docx
+                if file_name_dir.endswith('~$'):
+                    os.remove(file_name_dir)
+                    break
                 if file_name_dir.endswith('docx'):
+                    
                     data = docx.Document(file_name_dir)
                     data_list = []
                     for index, paras in enumerate(data.paragraphs):
                         data_list.append(paras.text)
 
+                    # change the list to str
                     data_str = ''.join(data_list)
                     es_data = {
                         'title': '{}'.format(file_name),
@@ -156,19 +162,23 @@ class ElasticClient(object):
             except Exception as e:
                 LOG.error('Can not insert info to index ,cause {}'.format(e))
 
-
-
-    # def dox_to_docx(self, file_name_dir):
-    #     try:
-    #         doc_name = file_name_dir
-    #         doc = self.word_client.Documents.Open(doc_name)
-    #         # save the file as docx
-    #         docx_name = 'x'.join(doc_name)
-    #         doc.SaveAs(docx_name, 16)
-    #         # if the convert sucessful ,remove it
-    #         os.remove(file_name_dir)
-    #     except Exception as e:
-    #         print('convert the file {} failed,cause by {}'.format(file_name_dir, e))
+    def dox_to_docx(self, file_name_dir):
+        doc_name = file_name_dir
+        docx_name = doc_name + 'x'
+        try:
+            word_client = wc.Dispatch("Word.Application")
+            doc = word_client.Documents.Open(doc_name)
+            # save the file as docx
+            # print(docx_name)
+            doc.SaveAs(docx_name, 16)
+            doc.Close()
+            word_client.Quit()
+            # if the convert sucessful ,remove it
+            os.remove(file_name_dir)
+        except Exception as e:
+            if os.path.exists(docx_name):
+                os.remove(docx_name)
+            print('convert the file {} failed,cause by {}'.format(file_name_dir, e))
 
 # def processfunc(self,file_name):
 # 	file_name_dir = os.path.join(PATH, file_name)
@@ -190,6 +200,7 @@ class ElasticClient(object):
 
 
 if __name__ == '__main__':
+    print(CONF_PATH)
     es = ElasticClient()
     while True:
         es.insert_data_to_es_index()
