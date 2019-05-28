@@ -147,7 +147,7 @@ class ElasticClient(object):
 
                 # read the file by third module python-docx
                 # if find temporary file ,we will not insert and will remove it
-                elif file_name_dir.startswith('~$'):
+                elif file_name.startswith('~$'):
                     os.remove(file_name_dir)
                     LOG.warning('This file is temporary file,should delete it')
                     break
