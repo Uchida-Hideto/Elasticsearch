@@ -186,10 +186,6 @@ class ElasticClient(object):
         coverted_name = converted_name
         try:
             word_client = wc.Dispatch("Word.Application")
-            docile_name = file_name_dir
-        coverted_name = converted_name
-        try:
-            word_client = wc.Dispatch("Word.Application")
             doc = word_client.Documents.Open(file_name)
             # save the file as docx
             # print(docx_name)
