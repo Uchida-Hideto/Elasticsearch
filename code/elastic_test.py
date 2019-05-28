@@ -150,7 +150,6 @@ class ElasticClient(object):
                 elif file_name.startswith('~$'):
                     os.remove(file_name_dir)
                     LOG.warning('This file is temporary file,should delete it')
-                    break
                     
                 elif file_name_dir.endswith('docx'):
                     self.read_docx_file(file_name,file_name_dir)
@@ -208,3 +207,4 @@ if __name__ == '__main__':
     while True:
         es.insert_data_to_es_index()
         time.sleep(TIMESPAN)
+     time.sleep(TIMESPAN)
