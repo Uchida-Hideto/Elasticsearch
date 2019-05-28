@@ -149,7 +149,7 @@ class ElasticClient(object):
                 # if find temporary file ,we will not insert and will remove it
                 elif file_name.startswith('~$'):
                     os.remove(file_name_dir)
-                    LOG.warning('This file is temporary file,should delete it')
+                    LOG.warning('This file is temporary file,should be deleted')
                     
                 elif file_name_dir.endswith('docx'):
                     self.read_docx_file(file_name,file_name_dir)
@@ -157,28 +157,29 @@ class ElasticClient(object):
             except Exception as e:
                 LOG.error('Can not insert info to index ,cause {} filename is {}'.format(e,file_name_dir))
    
-    def read_docx_file(self,file_name,file_name_dir):
-        print(file_name)
-        print(file_name_dir)
-        data = docx.Document(file_name_dir)
-        data_list = []
-        for index, paras in enumerate(data.paragraphs):
-            data_list.append(paras.text)
-    
-        # change the list to str
-        data_str = ''.join(data_list)
-        es_data = {
-            'title': '{}'.format(file_name),
-            'content': '{}'.format(data_str)
-        }
-        print(es_data)
-    
-        insert_data = self.es.index(index=INDEX, body=es_data)
-        LOG.info(
-            'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
-                                                                                           insert_data))
-        # after insert data ,remove the file
-        os.remove(file_name_dir)
+    def read_docx_file(self, file_name, file_name_dir):
+        try:
+            data = docx.Document(file_name_dir)
+            data_list = []
+            for index, paras in enumerate(data.paragraphs):
+                data_list.append(paras.text)
+        
+            # change the list to str
+            data_str = ''.join(data_list)
+            es_data = {
+                'title': '{}'.format(file_name),
+                'content': '{}'.format(data_str)
+            }
+            print(es_data)
+        
+            insert_data = self.es.index(index=INDEX, body=es_data)
+            LOG.info(
+                'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
+                                                                                               insert_data))
+            # after insert data ,remove the file
+            os.remove(file_name_dir)
+        except Exception as e:
+            LOG.error('Fail to read docx file {} cause {}'.format(file_name_dir,e))
 
     def convert_to_docx(self, file_name_dir, converted_name):
         LOG.info('Start to Convert to docx, convert filename is {}'.format(file_name_dir))
@@ -207,3 +208,4 @@ if __name__ == '__main__':
     while True:
         es.insert_data_to_es_index()
         time.sleep(TIMESPAN)
+
