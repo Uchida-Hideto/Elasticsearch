@@ -11,8 +11,6 @@ from elasticsearch.client import IndicesClient
 current_path = str(os.getcwd())
 CONF_PATH = r'{}\elastic.conf'.format(current_path)
 
-
-
 # LOGPATH = r'C:\Users\houji\Desktop'
 # TIMESPAN = 60
 # INDEX = 'test_index0'
@@ -20,6 +18,7 @@ CONF_PATH = r'{}\elastic.conf'.format(current_path)
 # HOSTS = '192.168.127.132:9200'
 
 # read config
+current_path = os.getcwd()
 cf_parser = configparser.ConfigParser()
 cf_parser.read(CONF_PATH)
 LOGPATH = cf_parser.get('DEFAULT', 'LOGPATH')
@@ -123,6 +122,7 @@ class ElasticClient(object):
         # judge the file exist or not
         # if file exist insert it
         file_name_list = os.listdir(FILEPATH)
+        LOG.info('current file name list is {}'.format(file_name_list))
         if not file_name_list:
             LOG.info('The directory is empty')
             return
@@ -132,71 +132,74 @@ class ElasticClient(object):
             try:
                 # if the file is doc save as docx
                 if file_name.endswith('doc'):
-                    self.dox_to_docx(file_name_dir)
+                    convert_name = file_name_dir + 'x'
+                    self.convert_to_docx(file_name_dir, convert_name)
+                    # the file name is not convert filename,we will use the name as title
+                    # and convert name use for open file and insert data
+                    self.read_docx_file(file_name, convert_name)
+
+                elif file_name.endswith('dot'):
+                    convert_name = os.path.splitext(file_name_dir)[0] + '.docx'
+                    self.convert_to_docx(file_name_dir, convert_name)
+                    # the file name is not convert filename,we will use the name as title
+                    # and convert name use for open file and insert data
+                    self.read_docx_file(file_name, convert_name)
 
                 # read the file by third module python-docx
-                if file_name_dir.endswith('~$'):
+                # if find temporary file ,we will not insert and will remove it
+                elif file_name_dir.startswith('~$'):
                     os.remove(file_name_dir)
+                    LOG.warning('This file is temporary file,should delete it')
                     break
-                if file_name_dir.endswith('docx'):
                     
-                    data = docx.Document(file_name_dir)
-                    data_list = []
-                    for index, paras in enumerate(data.paragraphs):
-                        data_list.append(paras.text)
-
-                    # change the list to str
-                    data_str = ''.join(data_list)
-                    es_data = {
-                        'title': '{}'.format(file_name),
-                        'content': '{}'.format(data_str)
-                    }
-
-                    insert_data = self.es.index(index=INDEX, body=es_data)
-                    LOG.info(
-                        'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
-                                                                                                       insert_data))
-                    # after insert data ,remove the file
-                    os.remove(file_name_dir)
-
+                elif file_name_dir.endswith('docx'):
+                    self.read_docx_file(file_name,file_name_dir)
+                    
             except Exception as e:
-                LOG.error('Can not insert info to index ,cause {}'.format(e))
+                LOG.error('Can not insert info to index ,cause {} filename is {}'.format(e,file_name_dir))
+   
+    def read_docx_file(self,file_name,file_name_dir):
+        print(file_name)
+        print(file_name_dir)
+        data = docx.Document(file_name_dir)
+        data_list = []
+        for index, paras in enumerate(data.paragraphs):
+            data_list.append(paras.text)
+    
+        # change the list to str
+        data_str = ''.join(data_list)
+        es_data = {
+            'title': '{}'.format(file_name),
+            'content': '{}'.format(data_str)
+        }
+        print(es_data)
+    
+        insert_data = self.es.index(index=INDEX, body=es_data)
+        LOG.info(
+            'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
+                                                                                           insert_data))
+        # after insert data ,remove the file
+        os.remove(file_name_dir)
 
-    def dox_to_docx(self, file_name_dir):
-        doc_name = file_name_dir
-        docx_name = doc_name + 'x'
+    def convert_to_docx(self, file_name_dir, converted_name):
+        LOG.info('Start to Convert to docx, convert filename is {}'.format(file_name_dir))
+        file_name = file_name_dir
+        coverted_name = converted_name
         try:
             word_client = wc.Dispatch("Word.Application")
-            doc = word_client.Documents.Open(doc_name)
+            doc = word_client.Documents.Open(file_name)
             # save the file as docx
             # print(docx_name)
-            doc.SaveAs(docx_name, 16)
+            doc.SaveAs(coverted_name, 16)
             doc.Close()
             word_client.Quit()
             # if the convert sucessful ,remove it
             os.remove(file_name_dir)
         except Exception as e:
-            if os.path.exists(docx_name):
-                os.remove(docx_name)
+            if os.path.exists(file_name):
+                os.remove(coverted_name)
             print('convert the file {} failed,cause by {}'.format(file_name_dir, e))
-
-# def processfunc(self,file_name):
-# 	file_name_dir = os.path.join(PATH, file_name)
-#
-# 	# read the file by third module python-docx
-# 	data = docx.Document(file_name_dir)
-# 	data_list = []
-# 	for index, paras in enumerate(data.paragraphs):
-# 		data_list.append(paras.text)
-# 	data_str = ''.join(data_list)
-# 	es_data = {
-# 		'title': '{}'.format(file_name),
-# 		'content': '{}'.format(data_str)
-# 	}
-# 	insert_data = self.es.index(index=INDEX, body=es_data)
-#
-# 	# after insert data ,remove the file
-# 	os.remove(file_name_dir)
+        return coverted_name
 
 
 if __name__ == '__main__':
