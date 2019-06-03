@@ -1,12 +1,16 @@
+# -*- coding:utf-8 -*-
 import os
 import time
 import logging
 import docx
 from win32com import client as wc
+import jieba
+import jieba.analyse
 
 import configparser
 from elasticsearch import Elasticsearch
 from elasticsearch.client import IndicesClient
+
 # from win32com import client
 current_path = str(os.getcwd())
 CONF_PATH = r'{}\elastic.conf'.format(current_path)
@@ -39,10 +43,10 @@ LOG.addHandler(file_handler)
 
 
 class ElasticClient(object):
-
+    
     def __init__(self):
         self.es = Elasticsearch(hosts=HOSTS)
-
+    
     def ping(self):
         """
         This function will determine whether the
@@ -51,9 +55,9 @@ class ElasticClient(object):
         """
         ping_status = self.es.ping()
         # LOG.info('The Elasticsearch service status is {}'.format(ping_status))
-
+        
         return ping_status
-
+    
     def get_index(self, index=INDEX):
         """
         get the index status
@@ -67,7 +71,7 @@ class ElasticClient(object):
             return index_status
         except Exception as e:
             LOG.error('Get index status failed ,cause {}'.format(e))
-
+    
     def set_mapping_info(self):
         """
         setting maping info to index
@@ -89,7 +93,7 @@ class ElasticClient(object):
         except Exception as e:
             LOG.error('Set Elasticsearch mapping info failed ,cause {}'.format(e))
             return None
-
+    
     def create_index(self):
         """
         create index
@@ -99,10 +103,10 @@ class ElasticClient(object):
             index_info = self.es.indices.create(index=INDEX, ignore=400)
             mapping_info = self.set_mapping_info()
             LOG.info('Create Elasticsearch index successful ,create info is {} {}'.format(index_info, mapping_info))
-
+        
         except Exception as e:
             LOG.error('Create Elasticsearch index failed ,cause {}'.format(e))
-
+    
     def insert_data_to_es_index(self):
         """
         insert data(read from file ) to es index
@@ -118,7 +122,7 @@ class ElasticClient(object):
         if not index_status:
             LOG.info('Index is not exist ,start to create index')
             self.create_index()
-
+        
         # judge the file exist or not
         # if file exist insert it
         file_name_list = os.listdir(FILEPATH)
@@ -126,7 +130,7 @@ class ElasticClient(object):
         if not file_name_list:
             LOG.info('The directory is empty')
             return
-
+        
         for file_name in file_name_list:
             file_name_dir = os.path.join(FILEPATH, file_name)
             try:
@@ -137,41 +141,44 @@ class ElasticClient(object):
                     # the file name is not convert filename,we will use the name as title
                     # and convert name use for open file and insert data
                     self.read_docx_file(file_name, convert_name)
-
+                
                 elif file_name.endswith('dot'):
                     convert_name = os.path.splitext(file_name_dir)[0] + '.docx'
                     self.convert_to_docx(file_name_dir, convert_name)
                     # the file name is not convert filename,we will use the name as title
                     # and convert name use for open file and insert data
                     self.read_docx_file(file_name, convert_name)
-
+                
                 # read the file by third module python-docx
                 # if find temporary file ,we will not insert and will remove it
                 elif file_name.startswith('~$'):
                     os.remove(file_name_dir)
                     LOG.warning('This file is temporary file,should be deleted')
-                    
+                
                 elif file_name_dir.endswith('docx'):
-                    self.read_docx_file(file_name,file_name_dir)
-                    
+                    self.read_docx_file(file_name, file_name_dir)
+            
             except Exception as e:
-                LOG.error('Can not insert info to index ,cause {} filename is {}'.format(e,file_name_dir))
-   
+                LOG.error('Can not insert info to index ,cause {} filename is {}'.format(e, file_name_dir))
+    
     def read_docx_file(self, file_name, file_name_dir):
         try:
             data = docx.Document(file_name_dir)
             data_list = []
             for index, paras in enumerate(data.paragraphs):
                 data_list.append(paras.text)
-        
+            
             # change the list to str
             data_str = ''.join(data_list)
+            # create key word use jieba
+            self.create_key_words(file_name,data_str)
+            
             es_data = {
                 'title': '{}'.format(file_name),
                 'content': '{}'.format(data_str)
             }
-            print(es_data)
-        
+            # print(es_data)
+            
             insert_data = self.es.index(index=INDEX, body=es_data)
             LOG.info(
                 'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
@@ -179,8 +186,8 @@ class ElasticClient(object):
             # after insert data ,remove the file
             os.remove(file_name_dir)
         except Exception as e:
-            LOG.error('Fail to read docx file {} cause {}'.format(file_name_dir,e))
-
+            LOG.error('Fail to read docx file {} cause {}'.format(file_name_dir, e),exc_info = True)
+    
     def convert_to_docx(self, file_name_dir, converted_name):
         LOG.info('Start to Convert to docx, convert filename is {}'.format(file_name_dir))
         file_name = file_name_dir
@@ -198,8 +205,37 @@ class ElasticClient(object):
         except Exception as e:
             if os.path.exists(file_name):
                 os.remove(coverted_name)
-            print('convert the file {} failed,cause by {}'.format(file_name_dir, e))
+            LOG.info('convert the file {} failed,cause by {}'.format(file_name_dir, e))
         return coverted_name
+    
+    def create_key_words(self,file_name,content_str):
+        split_word = jieba.cut(content_str)
+
+        with open(r'stopwords.txt') as f:
+            stopwords = f.read().split('\n')
+            stopwords = str(stopwords)
+        final = ""
+        print(stopwords)
+        for word in split_word:
+            if word not in stopwords:
+                if word != "。" and word != ',':
+                    final = final + " " + word
+        # print(final)
+
+        key_words = jieba.analyse.extract_tags(content_str, topK=5, withWeight=True, allowPOS=())
+        
+        # key_word is tuple ,change key_word as list
+        key_words = list(dict(key_words).keys())
+        
+        # create keyword dir
+        keyword_path = os.path.join(current_path, 'keywords')
+        if not os.path.exists(keyword_path):
+            os.mkdir(keyword_path)
+        # create the file under the keyword dir
+        
+        file_path = os.path.abspath(os.path.join(keyword_path, file_name)) + '.txt'
+        with open(file_path, 'w+') as f:
+            f.write(str(key_words))
 
 
 if __name__ == '__main__':
@@ -208,4 +244,3 @@ if __name__ == '__main__':
     while True:
         es.insert_data_to_es_index()
         time.sleep(TIMESPAN)
-
