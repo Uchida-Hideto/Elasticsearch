@@ -40,6 +40,12 @@ file_handler.setLevel(level=logging.DEBUG)
 log_format = logging.Formatter('%(asctime)s %(name)s %(process)d %(levelname)s %(message)s')
 file_handler.setFormatter(log_format)
 LOG.addHandler(file_handler)
+# set another log handler output error message
+error_handler = logging.FileHandler(r'{}\error-{}'.format(LOGPATH, LOGNAME))
+error_handler.setLevel(level=logging.ERROR)
+error_handler.setFormatter(log_format)
+LOG.addHandler(error_handler)
+
 
 
 class ElasticClient(object):
@@ -222,7 +228,7 @@ class ElasticClient(object):
                     final = final + " " + word
         # print(final)
 
-        key_words = jieba.analyse.extract_tags(content_str, topK=5, withWeight=True, allowPOS=())
+        key_words = jieba.analyse.extract_tags(content_str, topK=20, withWeight=True, allowPOS=())
         
         # key_word is tuple ,change key_word as list
         key_words = list(dict(key_words).keys())
