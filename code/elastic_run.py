@@ -53,7 +53,7 @@ class ElasticClient(object):
     def ping(self):
         """
         This function will determine whether the
-        elasticsearch service is running normally or not.
+        elastic search service is running normally or not.
          :return:
         """
         ping_status = self.es.ping()
@@ -75,7 +75,7 @@ class ElasticClient(object):
         except Exception as e:
             LOG.error('Get index status failed ,cause {}'.format(e))
     
-    def set_mapping_info(self):
+    def set_mapping_info(self,index):
         """
         setting maping info to index
         :return:
@@ -90,7 +90,7 @@ class ElasticClient(object):
                     }
                 }
             }
-            update_mapping = self.es.indices.put_mapping(index=INDEX, body=mapping, ignore=400)
+            update_mapping = self.es.indices.put_mapping(index=index, body=mapping, ignore=400)
             LOG.info('Set Elasticsearch mapping info successful,return message is {}'.format(update_mapping))
             return update_mapping
         except Exception as e:
@@ -104,7 +104,7 @@ class ElasticClient(object):
         """
         try:
             index_info = self.es.indices.create(index=INDEX, ignore=400)
-            mapping_info = self.set_mapping_info()
+            mapping_info = self.set_mapping_info(INDEX)
             LOG.info('Create Elasticsearch index successful ,create info is {} {}'.format(index_info, mapping_info))
         
         except Exception as e:
@@ -133,7 +133,7 @@ class ElasticClient(object):
         if not file_name_list:
             # LOG.info('The directory is empty')
             return
-        
+
         for file_name in file_name_list:
             file_name_dir = os.path.join(FILEPATH, file_name)
             try:
@@ -185,7 +185,7 @@ class ElasticClient(object):
             insert_data = self.es.index(index=INDEX, body=es_data)
             
             # send post to  Knowledge Graph
-            self.send_es_data_to_graph(file_name, data_str)
+            # self.send_es_data_to_graph(file_name, data_str)
             LOG.info(
                 'Insert info to index successful ,filename is {} ,return message is {}'.format(file_name_dir,
                                                                                                insert_data))
@@ -260,3 +260,4 @@ if __name__ == '__main__':
     while True:
         es.insert_data_to_es_index()
         time.sleep(TIMESPAN)
+
