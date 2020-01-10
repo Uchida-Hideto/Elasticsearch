@@ -87,6 +87,11 @@ class ElasticClient(object):
                         'type': 'text',
                         'analyzer': 'ik_max_word',
                         'search_analyzer': 'ik_max_word'
+                    },
+                    'title': {
+                        'type': 'text',
+                        'analyzer': 'ik_max_word',
+                        'search_analyzer': 'ik_max_word'
                     }
                 }
             }
